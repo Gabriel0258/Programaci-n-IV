@@ -30,6 +30,3 @@ const sanitizarQuery = [
 router.get('/products', sanitizarQuery, productController.getProducts);
 
 module.exports = router;
-// if ((category && sqlRegex.test(category)) || (search && sqlRegex.test(search))) {
-//     return res.status(200).json([])
-//   }
