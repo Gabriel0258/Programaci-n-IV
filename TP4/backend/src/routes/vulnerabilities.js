@@ -6,7 +6,10 @@ const { uploadMiddleware, uploadFile } = require('../controllers/uploadControlle
 // Command Injection
 router.post('/ping', vulnerabilityController.ping);
 
-// CSRF - Transferencia
+// CSRF - obtener token
+router.get('/csrf-token', vulnerabilityController.getCsrfToken);
+
+// CSRF - transferencia protegida
 router.post('/transfer', vulnerabilityController.transfer);
 
 // Local File Inclusion
