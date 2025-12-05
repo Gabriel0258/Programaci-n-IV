@@ -119,7 +119,7 @@ const verifyToken = (req, res) => {
 };
 
 // Protección Blind SQL Injection
-const checkUsername = (req, res) => {
+const checkUsername = async (req, res) => {
   const errores = validationResult(req);
   if (!errores.isEmpty()) {
     return responseSeguro(res, false);
