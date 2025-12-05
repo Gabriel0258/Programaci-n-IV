@@ -119,11 +119,12 @@ const verifyToken = (req, res) => {
 };
 
 // Protección Blind SQL Injection
-const checkUsername = (req, res) => {
+const checkUsername = async (req, res) => {
   const errores = validationResult(req);
   if (!errores.isEmpty()) {
     return responseSeguro(res, false);
   }
+  const { username } = req.body;
 
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
     // respuesta genérica, sin romper status 200
@@ -137,7 +138,7 @@ const checkUsername = (req, res) => {
     const query = "SELECT COUNT(*) AS count FROM users WHERE username = ?";
     const results = await db.query(query, [username]);
 
-    const exists = results[0].count > 0;
+    const exists = results[0]?.count > 0;
 
     // 3. Delay aleatorio → evita time-based blind SQL
     //CORREGIDO VULNERABLE: Expone errores de SQL
