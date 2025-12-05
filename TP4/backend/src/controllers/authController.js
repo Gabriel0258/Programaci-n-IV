@@ -125,42 +125,31 @@ const checkUsername = (req, res) => {
     return responseSeguro(res, false);
   }
 
-  const { username } = req.body;
-
-  //Mediante esta validación es posible detectar patrones sospechosos
-  if (username.includes("'") || username.includes("--")) {
-    console.warn('Posible intento de SQL injection:', {
-      ip: req.ip,
-      username: username,
-      timestamp: new Date()
-      });
-    return responseSeguro(res, false);
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+    // respuesta genérica, sin romper status 200
+    return res.json({ exists: false });
   }
-  
-  //CORREGIDO VULNERABLE: SQL injection que permite inferir información
-  //Mediante las consultas paramerizadas se evita inferir la información
-  const query = `SELECT COUNT(*) as count FROM users WHERE username = ?`;
-  
-  db.query(query, [username], async (err, results) => {
-    if (err) {
-      //CORREGIDO VULNERABLE: Expone errores de SQL
-      // Mediante la función responseSeguro se le envía una respuesta genérica
-      // sin exponer los errores
-      return responseSeguro(res, false);
-    }
-    
-    const exists = results[0]?.count > 0;
-    return responseSeguro(res, exists);
-  });
-};
 
-// Esta función envía una respuesta genérica junto a un delay aleatorio
-function responseSeguro(res, exists) {
-  const delay = Math.random() * 100 + 50;
-  setTimeout(() => {
-    res.json({ exists: exists === true });
-  }, delay);
-}
+  try {
+    // 2. Consulta parametrizada (previene SQL injection)
+    //CORREGIDO VULNERABLE: SQL injection que permite inferir información
+    //Mediante las consultas paramerizadas se evita inferir la información
+    const query = "SELECT COUNT(*) AS count FROM users WHERE username = ?";
+    const results = await db.query(query, [username]);
+
+    const exists = results[0].count > 0;
+
+    // 3. Delay aleatorio → evita time-based blind SQL
+    //CORREGIDO VULNERABLE: Expone errores de SQL
+    const delay = 50 + Math.random() * 100; // 50–150ms
+    setTimeout(() => {
+      res.json({ exists });
+    }, delay);
+  } catch (err) {
+    console.error("SQL error:", err);
+    return res.json({ exists: false }); // respuesta genérica
+  }
+};
 
 module.exports = {
   login,

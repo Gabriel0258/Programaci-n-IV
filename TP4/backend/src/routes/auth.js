@@ -1,3 +1,4 @@
+const checkUsernameLimit = require("../middleware/checkUsernameLimit");
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const { body } = require('express-validator');
@@ -30,8 +31,5 @@ const authController = require("../controllers/authController");
 router.post("/login", authController.login);
 router.post("/register", authController.register);
 router.post("/auth/verify", authController.verifyToken);
-router.post("/check-username", authController.checkUsername);
-
-// ruta para chequear el nombre del usuario
-router.post('/check-username', userLimit, validarUserName, authController.checkUsername);
+router.post("/check-username", checkUsernameLimit, authController.checkUsername);
 module.exports = router;
