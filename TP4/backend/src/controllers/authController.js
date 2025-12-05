@@ -1,6 +1,7 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const { db } = require("../config/database");
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { db } = require('../config/database');
+const { validationResult } = require('express-validator');
 const { escape } = require("html-escaper");
 const util = require("util");
 
@@ -117,22 +118,49 @@ const verifyToken = (req, res) => {
   }
 };
 
-// =====================================================
-// VULNERABLE checkUsername (para otro test)
-// =====================================================
-const checkUsername = async (req, res) => {
+// Protección Blind SQL Injection
+const checkUsername = (req, res) => {
+  const errores = validationResult(req);
+  if (!errores.isEmpty()) {
+    return responseSeguro(res, false);
+  }
+
   const { username } = req.body;
 
-  const query = `SELECT COUNT(*) as count FROM users WHERE username = '${username}'`;
-
-  try {
-    const results = await db.query(query);
-    const exists = results[0].count > 0;
-    res.json({ exists });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  //Mediante esta validación es posible detectar patrones sospechosos
+  if (username.includes("'") || username.includes("--")) {
+    console.warn('Posible intento de SQL injection:', {
+      ip: req.ip,
+      username: username,
+      timestamp: new Date()
+      });
+    return responseSeguro(res, false);
   }
+  
+  //CORREGIDO VULNERABLE: SQL injection que permite inferir información
+  //Mediante las consultas paramerizadas se evita inferir la información
+  const query = `SELECT COUNT(*) as count FROM users WHERE username = ?`;
+  
+  db.query(query, [username], async (err, results) => {
+    if (err) {
+      //CORREGIDO VULNERABLE: Expone errores de SQL
+      // Mediante la función responseSeguro se le envía una respuesta genérica
+      // sin exponer los errores
+      return responseSeguro(res, false);
+    }
+    
+    const exists = results[0]?.count > 0;
+    return responseSeguro(res, exists);
+  });
 };
+
+// Esta función envía una respuesta genérica junto a un delay aleatorio
+function responseSeguro(res, exists) {
+  const delay = Math.random() * 100 + 50;
+  setTimeout(() => {
+    res.json({ exists: exists === true });
+  }, delay);
+}
 
 module.exports = {
   login,
