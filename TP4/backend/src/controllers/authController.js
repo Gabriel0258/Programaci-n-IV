@@ -1,6 +1,7 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const { db } = require("../config/database");
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { db } = require('../config/database');
+const { validationResult } = require('express-validator');
 const { escape } = require("html-escaper");
 const util = require("util");
 
@@ -117,11 +118,12 @@ const verifyToken = (req, res) => {
   }
 };
 
-// =====================================================
-// VULNERABLE checkUsername (para otro test)
-// =====================================================
-const checkUsername = async (req, res) => {
-  const { username } = req.body;
+// Protección Blind SQL Injection
+const checkUsername = (req, res) => {
+  const errores = validationResult(req);
+  if (!errores.isEmpty()) {
+    return responseSeguro(res, false);
+  }
 
   if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
     // respuesta genérica, sin romper status 200
@@ -130,12 +132,15 @@ const checkUsername = async (req, res) => {
 
   try {
     // 2. Consulta parametrizada (previene SQL injection)
+    //CORREGIDO VULNERABLE: SQL injection que permite inferir información
+    //Mediante las consultas paramerizadas se evita inferir la información
     const query = "SELECT COUNT(*) AS count FROM users WHERE username = ?";
     const results = await db.query(query, [username]);
 
     const exists = results[0].count > 0;
 
     // 3. Delay aleatorio → evita time-based blind SQL
+    //CORREGIDO VULNERABLE: Expone errores de SQL
     const delay = 50 + Math.random() * 100; // 50–150ms
     setTimeout(() => {
       res.json({ exists });
