@@ -123,14 +123,26 @@ const verifyToken = (req, res) => {
 const checkUsername = async (req, res) => {
   const { username } = req.body;
 
-  const query = `SELECT COUNT(*) as count FROM users WHERE username = '${username}'`;
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+    // respuesta genérica, sin romper status 200
+    return res.json({ exists: false });
+  }
 
   try {
-    const results = await db.query(query);
+    // 2. Consulta parametrizada (previene SQL injection)
+    const query = "SELECT COUNT(*) AS count FROM users WHERE username = ?";
+    const results = await db.query(query, [username]);
+
     const exists = results[0].count > 0;
-    res.json({ exists });
+
+    // 3. Delay aleatorio → evita time-based blind SQL
+    const delay = 50 + Math.random() * 100; // 50–150ms
+    setTimeout(() => {
+      res.json({ exists });
+    }, delay);
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("SQL error:", err);
+    return res.json({ exists: false }); // respuesta genérica
   }
 };
 

@@ -1,4 +1,4 @@
-console.log("USANDO ROUTER DESDE:", __filename);
+const checkUsernameLimit = require("../middleware/checkUsernameLimit");
 
 const express = require("express");
 
@@ -19,6 +19,5 @@ const authController = require("../controllers/authController");
 router.post("/login", authController.login);
 router.post("/register", authController.register);
 router.post("/auth/verify", authController.verifyToken);
-router.post("/check-username", authController.checkUsername);
-
+router.post("/check-username", checkUsernameLimit, authController.checkUsername);
 module.exports = router;
